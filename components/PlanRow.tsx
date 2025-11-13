@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import type { PlanItem } from '../types';
-import { formatCurrency } from '../utils/formatters';
+import { formatCurrency, formatPercentage } from '../utils/formatters';
 import { TrashIcon } from './icons/TrashIcon';
 import { ChevronDownIcon } from './icons/ChevronDownIcon';
 import { ChevronUpIcon } from './icons/ChevronUpIcon';
@@ -66,8 +66,7 @@ export const PlanRow: React.FC<PlanRowProps> = (props) => {
           <div className="text-sm text-gray-500">{brand}</div>
         </td>
         <td className="px-3 py-4 whitespace-nowrap text-sm text-green-700 align-top">{formatCurrency(calculated.totalRevenue)}</td>
-        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-700 align-top">{formatCurrency(calculated.importValueVND)}</td>
-        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-700 align-top">{formatCurrency(calculated.totalClearanceAndLogisticsCost)}</td>
+        <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-700 align-top">{formatCurrency(calculated.totalCOGS)}</td>
         <td className="px-3 py-4 whitespace-nowrap text-sm text-blue-700 font-medium align-top">{formatCurrency(calculated.grossProfit)}</td>
         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-700 align-top">{formatCurrency(calculated.totalSellingCost)}</td>
         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-700 align-top">{formatCurrency(calculated.totalGaCost)}</td>
@@ -81,6 +80,9 @@ export const PlanRow: React.FC<PlanRowProps> = (props) => {
         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-700 align-top">{formatCurrency(calculated.outputVAT)}</td>
         <td className="px-3 py-4 whitespace-nowrap text-sm text-gray-700 font-medium align-top">{formatCurrency(calculated.vatPayable)}</td>
         <td className="px-3 py-4 whitespace-nowrap text-sm text-red-700 font-bold align-top">{formatCurrency(calculated.totalTaxPayable)}</td>
+        <td className={`px-3 py-4 whitespace-nowrap text-sm font-medium align-top ${(calculated.netProfitMargin ?? 0) < 0 ? 'text-red-600' : 'text-blue-700'}`}>
+          {formatPercentage(calculated.netProfitMargin)}
+        </td>
       </tr>
       {isExpanded && (
         <tr className="bg-gray-50">

@@ -63,6 +63,7 @@ export interface PlanItem extends Product {
     loanInterestCostFirstTransfer?: number; // New for 1.6
     loanSecondTransferAmountVND?: number; // New for 1.6
     loanInterestCostSecondTransfer?: number; // New for 1.6
+    loanInterestCostVat?: number;
     postClearanceStorageCost?: number; // 1.7
     purchasingServiceFee?: number; // Replaces postClearanceFinancialCost for 1.8
     otherInternationalPurchaseCost?: number; // 1.10
@@ -97,6 +98,7 @@ export interface PlanItem extends Product {
     profitBeforeTax?: number;
     corporateIncomeTax?: number;
     netProfit?: number;
+    netProfitMargin?: number;
     totalTaxPayable?: number;
     
     // Profit Distribution

@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef } from 'react';
 import { transcribeAudio, generateMeetingMinutes, regenerateMeetingMinutes } from '../services/geminiService';
 import { processAudio, type AudioProcessingOptions } from '../utils/audioProcessor';
@@ -12,11 +11,13 @@ import MeetingMinutesGenerator from '../components/MeetingMinutesGenerator';
 import MeetingMinutesResult from '../components/MeetingMinutesResult';
 import EditRequest from '../components/EditRequest';
 import type { MeetingDetails } from '../types';
+import SpeakerMapper from '../components/SpeakerMapper';
 
 export const MeetingMinutesModule: React.FC = () => {
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
     const [selectedModel, setSelectedModel] = useState<string>('gemini-2.5-pro');
     const [transcription, setTranscription] = useState<string>('');
+    const [mappedTranscription, setMappedTranscription] = useState<string>('');
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const [progress, setProgress] = useState<number>(0);
     const [statusMessage, setStatusMessage] = useState<string>('');
@@ -47,6 +48,7 @@ export const MeetingMinutesModule: React.FC = () => {
     const handleFileSelect = (files: File[]) => {
         setSelectedFiles(files);
         setTranscription('');
+        setMappedTranscription('');
         setError(null);
         setProgress(0);
         setStatusMessage('');
@@ -64,27 +66,28 @@ export const MeetingMinutesModule: React.FC = () => {
         if (isLoading) {
             setIsLoading(false);
             setProgress(0);
-            setStatusMessage('Processing cancelled by user.');
+            setStatusMessage('Đã hủy bởi người dùng.');
         }
         if (isGeneratingMinutes) {
             setIsGeneratingMinutes(false);
-            setMinutesError('Minute generation cancelled by user.');
+            setMinutesError('Đã hủy tạo biên bản.');
         }
         if (isEditingMinutes) {
             setIsEditingMinutes(false);
-            setEditError('Edit request cancelled by user.');
+            setEditError('Đã hủy yêu cầu chỉnh sửa.');
         }
     };
 
     const handleProcessFile = useCallback(async () => {
         if (selectedFiles.length === 0) {
-            setError("Please select one or more files first.");
+            setError("Vui lòng chọn một hoặc nhiều tệp.");
             return;
         }
 
         setIsLoading(true);
         cancelRequestRef.current = false;
         setTranscription('');
+        setMappedTranscription('');
         setError(null);
         setMeetingMinutesHtml('');
         setMinutesError(null);
@@ -99,7 +102,7 @@ export const MeetingMinutesModule: React.FC = () => {
                 const fileProgressStart = (i / selectedFiles.length) * 100;
                 const fileProgressSpan = 100 / selectedFiles.length;
                 
-                setStatusMessage(`Processing file ${i + 1}/${selectedFiles.length}: ${fileToProcess.name}`);
+                setStatusMessage(`Đang xử lý tệp ${i + 1}/${selectedFiles.length}: ${fileToProcess.name}`);
 
                 if (fileToProcess.type.startsWith('text/')) {
                     setProgress(fileProgressStart + fileProgressSpan * 0.5);
@@ -109,7 +112,7 @@ export const MeetingMinutesModule: React.FC = () => {
                     const textContent = await fileToProcess.text();
                     if (cancelRequestRef.current) return;
 
-                    allContent.push(`--- Start of content from ${fileToProcess.name} ---\n${textContent}\n--- End of content from ${fileToProcess.name} ---`);
+                    allContent.push(`--- Bắt đầu nội dung từ ${fileToProcess.name} ---\n${textContent}\n--- Kết thúc nội dung từ ${fileToProcess.name} ---`);
                     setProgress(fileProgressStart + fileProgressSpan);
 
                 } else if (fileToProcess.type.startsWith('audio/')) {
@@ -118,7 +121,7 @@ export const MeetingMinutesModule: React.FC = () => {
                     let audioProcessingProgressSpan = fileProgressSpan * 0.5;
                     
                     if (requiresProcessing) {
-                        setStatusMessage(`(File ${i + 1}/${selectedFiles.length}) Applying audio optimizations...`);
+                        setStatusMessage(`(Tệp ${i + 1}/${selectedFiles.length}) Đang tối ưu hóa âm thanh...`);
                         const processingProgressUpdater = (processingProgress: number) => {
                            const progressInSpan = processingProgress / 100 * audioProcessingProgressSpan;
                            setProgress(fileProgressStart + progressInSpan);
@@ -132,7 +135,7 @@ export const MeetingMinutesModule: React.FC = () => {
                     const transcriptionProgressSpan = fileProgressSpan - (audioProcessingProgressStart - fileProgressStart);
 
                     setProgress(transcriptionProgressStart + transcriptionProgressSpan * 0.1);
-                    setStatusMessage(`(File ${i + 1}/${selectedFiles.length}) Sending to Gemini...`);
+                    setStatusMessage(`(Tệp ${i + 1}/${selectedFiles.length}) Đang gửi đến Gemini...`);
 
                     let intervalId: number | null = null;
                     try {
@@ -157,40 +160,41 @@ export const MeetingMinutesModule: React.FC = () => {
                         if (cancelRequestRef.current) return;
 
                         setProgress(transcriptionProgressStart + transcriptionProgressSpan * 0.95);
-                        setStatusMessage(`(File ${i + 1}/${selectedFiles.length}) Finalizing...`);
+                        setStatusMessage(`(Tệp ${i + 1}/${selectedFiles.length}) Đang hoàn tất...`);
                         await new Promise(res => setTimeout(res, 200));
                         if (cancelRequestRef.current) return;
                         
-                        allContent.push(`--- Start of transcription from ${fileToProcess.name} ---\n${result}\n--- End of transcription from ${fileToProcess.name} ---`);
+                        allContent.push(`--- Bắt đầu phiên âm từ ${fileToProcess.name} ---\n${result}\n--- Kết thúc phiên âm từ ${fileToProcess.name} ---`);
                         setProgress(fileProgressStart + fileProgressSpan);
                     } catch (e) {
                         if (intervalId) clearInterval(intervalId);
                         throw e; // re-throw to be caught by outer catch
                     }
                 } else {
-                     allContent.push(`--- Skipped unsupported file: ${fileToProcess.name} (type: ${fileToProcess.type || 'unknown'}) ---`);
+                     allContent.push(`--- Đã bỏ qua tệp không được hỗ trợ: ${fileToProcess.name} (loại: ${fileToProcess.type || 'không rõ'}) ---`);
                      setProgress(fileProgressStart + fileProgressSpan);
                 }
             }
 
             setTranscription(allContent.join('\n\n'));
             setProgress(100);
-            setStatusMessage('✅ Processing complete!');
+            setStatusMessage('✅ Xử lý hoàn tất!');
 
         } catch (err) {
             if (cancelRequestRef.current) return;
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-            setError(`Processing failed: ${errorMessage}`);
+            const errorMessage = err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định.";
+            setError(errorMessage);
             setProgress(0);
-            setStatusMessage('Error!');
+            setStatusMessage('Đã xảy ra lỗi!');
         } finally {
             setIsLoading(false);
         }
     }, [selectedFiles, selectedModel, processingOptions]);
 
     const handleGenerateMinutes = useCallback(async (details: MeetingDetails) => {
-        if (!transcription) {
-            setMinutesError("A transcription must exist before generating minutes.");
+        const finalTranscription = mappedTranscription || transcription;
+        if (!finalTranscription) {
+            setMinutesError("Phải có văn bản phiên âm trước khi tạo biên bản.");
             return;
         }
 
@@ -202,7 +206,7 @@ export const MeetingMinutesModule: React.FC = () => {
         setLastMeetingDetails(details);
 
         setMinutesGenerationProgress(0);
-        setMinutesGenerationStatus('Initializing...');
+        setMinutesGenerationStatus('Đang khởi tạo...');
         const intervalId = window.setInterval(() => {
             if (cancelRequestRef.current) {
                 clearInterval(intervalId);
@@ -214,38 +218,39 @@ export const MeetingMinutesModule: React.FC = () => {
                     clearInterval(intervalId);
                     return 95;
                 }
-                if (next < 20) setMinutesGenerationStatus('Sending transcription to AI...');
-                else if (next < 70) setMinutesGenerationStatus('AI is analyzing the content...');
-                else setMinutesGenerationStatus('AI is structuring the minutes...');
+                if (next < 20) setMinutesGenerationStatus('Đang gửi văn bản đến AI...');
+                else if (next < 70) setMinutesGenerationStatus('AI đang phân tích nội dung...');
+                else setMinutesGenerationStatus('AI đang cấu trúc biên bản...');
                 return next;
             });
         }, 600);
 
 
         try {
-            const resultHtml = await generateMeetingMinutes(transcription, details, selectedModel);
+            const resultHtml = await generateMeetingMinutes(finalTranscription, details, selectedModel);
             clearInterval(intervalId);
             if (cancelRequestRef.current) return;
 
             setMinutesGenerationProgress(100);
-            setMinutesGenerationStatus('✅ Minutes generated!');
+            setMinutesGenerationStatus('✅ Đã tạo biên bản!');
             await new Promise(res => setTimeout(res, 800));
 
             setMeetingMinutesHtml(resultHtml);
         } catch (err) {
             clearInterval(intervalId);
             if (cancelRequestRef.current) return;
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-            setMinutesError(`Failed to generate minutes: ${errorMessage}`);
+            const errorMessage = err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định.";
+            setMinutesError(errorMessage);
         } finally {
             clearInterval(intervalId);
             setIsGeneratingMinutes(false);
         }
-    }, [transcription, selectedModel]);
+    }, [transcription, mappedTranscription, selectedModel]);
 
     const handleRequestEdits = useCallback(async (editText: string) => {
-        if (!transcription || !meetingMinutesHtml || !lastMeetingDetails) {
-            setEditError("Cannot request edits without an existing transcription, generated minutes, and meeting details.");
+        const finalTranscription = mappedTranscription || transcription;
+        if (!finalTranscription || !meetingMinutesHtml || !lastMeetingDetails) {
+            setEditError("Không thể yêu cầu chỉnh sửa nếu thiếu văn bản, biên bản đã tạo hoặc chi tiết cuộc họp.");
             return;
         }
 
@@ -253,7 +258,7 @@ export const MeetingMinutesModule: React.FC = () => {
         cancelRequestRef.current = false;
         setEditError(null);
         setEditProgress(0);
-        setEditStatusMessage('Initializing edit...');
+        setEditStatusMessage('Đang khởi tạo chỉnh sửa...');
 
         const intervalId = window.setInterval(() => {
             if (cancelRequestRef.current) {
@@ -266,40 +271,40 @@ export const MeetingMinutesModule: React.FC = () => {
                     clearInterval(intervalId);
                     return 95;
                 }
-                if (next < 30) setEditStatusMessage('AI is reading your request...');
-                else if (next < 80) setEditStatusMessage('AI is applying the changes...');
-                else setEditStatusMessage('Finalizing the new version...');
+                if (next < 30) setEditStatusMessage('AI đang đọc yêu cầu của bạn...');
+                else if (next < 80) setEditStatusMessage('AI đang áp dụng các thay đổi...');
+                else setEditStatusMessage('Đang hoàn tất phiên bản mới...');
                 return next;
             });
         }, 500);
 
 
         try {
-            const resultHtml = await regenerateMeetingMinutes(transcription, lastMeetingDetails, meetingMinutesHtml, editText, selectedModel);
+            const resultHtml = await regenerateMeetingMinutes(finalTranscription, lastMeetingDetails, meetingMinutesHtml, editText, selectedModel);
             clearInterval(intervalId);
             if (cancelRequestRef.current) return;
 
             setEditProgress(100);
-            setEditStatusMessage('✅ Edits applied successfully!');
+            setEditStatusMessage('✅ Đã áp dụng chỉnh sửa!');
             await new Promise(res => setTimeout(res, 800));
 
             setMeetingMinutesHtml(resultHtml);
         } catch (err) {
             clearInterval(intervalId);
             if (cancelRequestRef.current) return;
-            const errorMessage = err instanceof Error ? err.message : "An unknown error occurred.";
-            setEditError(`Failed to edit minutes: ${errorMessage}`);
+            const errorMessage = err instanceof Error ? err.message : "Đã xảy ra lỗi không xác định.";
+            setEditError(errorMessage);
         } finally {
             clearInterval(intervalId);
             setIsEditingMinutes(false);
         }
-    }, [transcription, meetingMinutesHtml, selectedModel, lastMeetingDetails]);
+    }, [transcription, mappedTranscription, meetingMinutesHtml, selectedModel, lastMeetingDetails]);
 
     const getButtonText = () => {
-        if (isLoading) return 'Processing...';
+        if (isLoading) return 'Đang xử lý...';
         const count = selectedFiles.length;
-        if (count <= 1) return '▶️ Process File';
-        return `▶️ Process ${count} Files`;
+        if (count <= 1) return '▶️ Xử lý Tệp';
+        return `▶️ Xử lý ${count} Tệp`;
     };
 
     const isBusy = isLoading || isGeneratingMinutes || isEditingMinutes;
@@ -349,7 +354,7 @@ export const MeetingMinutesModule: React.FC = () => {
                         >
                             {getButtonText()}
                         </button>
-                        {error && <p className="text-red-500 mt-4">{error}</p>}
+                        {error && <p className="text-red-500 mt-4 font-semibold">{error}</p>}
                     </div>
                     
                     {isLoading && (
@@ -373,7 +378,12 @@ export const MeetingMinutesModule: React.FC = () => {
                         <>
                             <div className="space-y-4 pt-4 border-t border-gray-200">
                                 <h2 className="text-lg font-semibold text-indigo-600">4. Nội dung File / Văn bản</h2>
-                                <TranscriptionResult text={transcription} />
+                                <SpeakerMapper
+                                    originalTranscription={transcription}
+                                    onMappingApplied={setMappedTranscription}
+                                    disabled={isBusy}
+                                />
+                                <TranscriptionResult text={mappedTranscription || transcription} />
                             </div>
 
                             <div className="space-y-4 pt-4 border-t border-gray-200">
@@ -394,7 +404,7 @@ export const MeetingMinutesModule: React.FC = () => {
                                             onSubmit={handleGenerateMinutes} 
                                             disabled={isGeneratingMinutes || isEditingMinutes}
                                         />
-                                        {minutesError && <p className="text-red-500 mt-2 text-center">{minutesError}</p>}
+                                        {minutesError && <p className="text-red-500 mt-2 text-center font-semibold">{minutesError}</p>}
                                     </>
                                 )}
                             </div>
@@ -429,7 +439,7 @@ export const MeetingMinutesModule: React.FC = () => {
                                         disabled={isEditingMinutes}
                                     />
                                 )}
-                                {editError && <p className="text-red-500 mt-2 text-center">{editError}</p>}
+                                {editError && <p className="text-red-500 mt-2 text-center font-semibold">{editError}</p>}
                             </div>
                         </>
                     )}

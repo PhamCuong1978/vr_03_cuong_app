@@ -7,6 +7,7 @@ import { recalculateEntirePlan } from '../utils/calculators';
 import { generateHtmlReport } from '../utils/reportGenerator';
 import { DuplicateIcon } from '../components/icons/DuplicateIcon';
 import { DocumentDownloadIcon } from '../components/icons/DocumentDownloadIcon';
+import { UploadIcon } from '../components/icons/UploadIcon';
 
 interface SavedPlansModuleProps {
   onLoadPlan: (plan: SavedPlan) => void;
@@ -63,6 +64,53 @@ export const SavedPlansModule: React.FC<SavedPlansModuleProps> = ({ onLoadPlan }
         }
     };
     
+    const handleImportAndSavePlan = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const text = e.target?.result;
+                if (typeof text !== 'string') throw new Error('Không thể đọc file.');
+                
+                const importedPlan = JSON.parse(text) as SavedPlan;
+
+                // Basic validation
+                if (importedPlan && importedPlan.id && importedPlan.name && Array.isArray(importedPlan.planItems) && importedPlan.settings) {
+                    
+                    const existingPlansJson = localStorage.getItem('savedBusinessPlans');
+                    const existingPlans: SavedPlan[] = existingPlansJson ? JSON.parse(existingPlansJson) : [];
+
+                    // Check for duplicates by ID
+                    if (existingPlans.some(p => p.id === importedPlan.id)) {
+                        if (!window.confirm(`Một kế hoạch với ID "${importedPlan.id}" (${importedPlan.name}) đã tồn tại. Bạn có muốn ghi đè nó không?`)) {
+                            if(event.target) event.target.value = ''; // Reset input
+                            return;
+                        }
+                        const plansWithoutDuplicate = existingPlans.filter(p => p.id !== importedPlan.id);
+                        const updatedPlans = [...plansWithoutDuplicate, importedPlan];
+                        localStorage.setItem('savedBusinessPlans', JSON.stringify(updatedPlans));
+                        setSavedPlans(updatedPlans);
+                        alert(`Đã ghi đè và tải lên thành công kế hoạch "${importedPlan.name}"!`);
+                    } else {
+                        const updatedPlans = [...existingPlans, importedPlan];
+                        localStorage.setItem('savedBusinessPlans', JSON.stringify(updatedPlans));
+                        setSavedPlans(updatedPlans);
+                        alert(`Tải lên và lưu thành công kế hoạch "${importedPlan.name}"!`);
+                    }
+                } else {
+                    throw new Error('Định dạng file kế hoạch không hợp lệ. Vui lòng kiểm tra lại file JSON được xuất từ ứng dụng.');
+                }
+            } catch (error) {
+                alert(`Lỗi khi xử lý file: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
+            } finally {
+                if(event.target) event.target.value = ''; // Reset input
+            }
+        };
+        reader.readAsText(file);
+    };
+
     const handleViewReport = (plan: SavedPlan) => {
         try {
             const recalculatedItems = recalculateEntirePlan(plan.planItems, {
@@ -124,15 +172,31 @@ export const SavedPlansModule: React.FC<SavedPlansModuleProps> = ({ onLoadPlan }
                             onChange={(e) => setSearchTerm(e.target.value)}
                             className="w-full max-w-sm px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                         />
-                         <button
-                            onClick={handleDeleteAllPlans}
-                            disabled={savedPlans.length === 0}
-                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:bg-gray-300 disabled:cursor-not-allowed"
-                            title="Xóa tất cả kế hoạch"
-                        >
-                            <TrashIcon className="h-4 w-4 mr-2" />
-                            Xóa tất cả
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <label 
+                                htmlFor="import-saved-plan"
+                                className="cursor-pointer inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-orange-500 hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                            >
+                                <UploadIcon className="h-4 w-4 mr-2" />
+                                Tải lên Kế hoạch
+                            </label>
+                            <input
+                                id="import-saved-plan"
+                                type="file"
+                                className="hidden"
+                                accept=".json,application/json"
+                                onChange={handleImportAndSavePlan}
+                            />
+                            <button
+                                onClick={handleDeleteAllPlans}
+                                disabled={savedPlans.length === 0}
+                                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                title="Xóa tất cả kế hoạch"
+                            >
+                                <TrashIcon className="h-4 w-4 mr-2" />
+                                Xóa tất cả
+                            </button>
+                        </div>
                     </div>
                 </div>
 

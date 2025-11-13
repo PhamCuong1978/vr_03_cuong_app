@@ -49,7 +49,8 @@ function calculatePreTotals(item: PlanItem, rates: PlanRates): PlanItem {
   const loanInterestCostFirstTransfer = loanFirstTransferAmountVND * dailyInterestRate * costs.loanFirstTransferInterestDays;
   const loanSecondTransferAmountVND = importValueVND > loanFirstTransferAmountVND ? importValueVND - loanFirstTransferAmountVND : 0;
   const loanInterestCostSecondTransfer = (loanFirstTransferAmountVND + loanSecondTransferAmountVND) * dailyInterestRate * costs.postClearanceStorageDays;
-  const importInterestCost = loanInterestCostFirstTransfer + loanInterestCostSecondTransfer;
+  const loanInterestCostVat = (importVAT ?? 0) * dailyInterestRate * costs.postClearanceStorageDays;
+  const importInterestCost = loanInterestCostFirstTransfer + loanInterestCostSecondTransfer + loanInterestCostVat;
 
   const generalWarehouseCost = quantityInKg * costs.generalWarehouseCostRatePerKg;
   const postClearanceStorageCost = quantityInKg * costs.postClearanceStorageDays * costs.postClearanceStorageRatePerKgDay;
@@ -82,6 +83,7 @@ function calculatePreTotals(item: PlanItem, rates: PlanRates): PlanItem {
     loanInterestCostFirstTransfer,
     loanSecondTransferAmountVND,
     loanInterestCostSecondTransfer,
+    loanInterestCostVat,
     postClearanceStorageCost,
     purchasingServiceFee,
     otherInternationalPurchaseCost,
@@ -135,9 +137,12 @@ function calculatePostTotals(item: PlanItem, totals: { totalGrossProfit: number;
   const totalOperatingCost = totalSellingCost + totalGaCost;
   const totalPreTaxCost = (item.calculated.totalCOGS ?? 0) + totalOperatingCost + totalFinancialCost;
   const profitBeforeTax = (item.calculated.totalRevenue ?? 0) - totalPreTaxCost;
-  const corporateIncomeTax = profitBeforeTax > 0 ? profitBeforeTax * CORP_INCOME_TAX_RATE : 0;
+  const corporateIncomeTax = profitBeforeTax * CORP_INCOME_TAX_RATE;
   const netProfit = profitBeforeTax - corporateIncomeTax;
   const totalTaxPayable = corporateIncomeTax + (vatPayable ?? 0);
+
+  const totalRevenue = item.calculated.totalRevenue ?? 0;
+  const netProfitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
   const retainedForProvision = netProfit > 0 ? netProfit * PROVISION_RATE : 0;
   const retainedForBusiness = netProfit > 0 ? netProfit * BUSINESS_CAPITAL_RATE : 0;
@@ -166,6 +171,7 @@ function calculatePostTotals(item: PlanItem, totals: { totalGrossProfit: number;
     profitBeforeTax,
     corporateIncomeTax,
     netProfit,
+    netProfitMargin,
     totalTaxPayable,
     retainedForProvision,
     retainedForBusiness,

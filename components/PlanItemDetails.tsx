@@ -123,7 +123,7 @@ export const PlanItemDetails: React.FC<PlanItemDetailsProps> = ({
 
   return (
     <div className="p-4 bg-white border-t border-gray-200">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         
         {/* Section 1: Quantity & Price */}
         <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
@@ -225,8 +225,15 @@ export const PlanItemDetails: React.FC<PlanItemDetailsProps> = ({
                 <DetailRow label="6. Chi phí lãi vay lần 2" value={formatCurrency(calculated.loanInterestCostSecondTransfer)} />
               </div>
 
+              <div className="border-t pt-3 space-y-2">
+                <h5 className="font-medium text-sm text-gray-600">Lần chuyển nộp thuế tại Hải Quan</h5>
+                <DetailRow label="Số tiền nộp thuế GTGT" value={formatCurrency(calculated.importVAT)} />
+                <p className="text-sm text-gray-600">Thời gian tính lãi: <span className="font-semibold float-right text-gray-800">{userInput.costs.postClearanceStorageDays} ngày</span></p>
+                <DetailRow label="7. Chi phí lãi vay nộp thuế" value={formatCurrency(calculated.loanInterestCostVat)} />
+              </div>
+
               <div className="!mt-3 pt-2 border-t flex justify-between items-center">
-                <span className="text-sm font-semibold text-gray-700">7. Tổng lãi vay</span>
+                <span className="text-sm font-semibold text-gray-700">8. Tổng lãi vay</span>
                 <span className="font-bold text-gray-900">{formatCurrency(calculated.importInterestCost)}</span>
               </div>
             </div>
@@ -263,8 +270,8 @@ export const PlanItemDetails: React.FC<PlanItemDetailsProps> = ({
            <FormattedNumberInput id={`otherInternationalCosts-${id}`} label="1.10 Chi phí khác" value={userInput.costs.otherInternationalCosts} onChange={value => updateItem(id, 'costs.otherInternationalCosts', value)} addon="VND"/>
         </div>
 
-        {/* Section 3: All Operating Costs */}
-        <div className="space-y-4 p-4 bg-gray-50 rounded-lg md:col-span-2 lg:col-span-1">
+        {/* Section 3: Selling Costs */}
+        <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
           <h4 className="font-semibold text-gray-700 border-b pb-2">2. Chi phí bán hàng</h4>
            <div className="p-2 bg-white rounded border border-gray-200">
             <div className="flex justify-between items-center text-sm">
@@ -302,8 +309,11 @@ export const PlanItemDetails: React.FC<PlanItemDetailsProps> = ({
             </p>
           </div>
           <FormattedNumberInput id={`otherSellingCosts-${id}`} label="2.2 Chi phí khác tại nơi bán" value={userInput.costs.otherSellingCosts} onChange={value => updateItem(id, 'costs.otherSellingCosts', value)} addon="VND" />
-
-          <h4 className="font-semibold text-gray-700 border-b pt-4 pb-2">3. Chi phí quản lý doanh nghiệp</h4>
+        </div>
+        
+        {/* Section 4: G&A Costs */}
+        <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+          <h4 className="font-semibold text-gray-700 border-b pb-2">3. Chi phí quản lý doanh nghiệp</h4>
           <div className="p-2 bg-white rounded border border-gray-200">
             <div className="flex justify-between items-center text-sm">
               <span className="text-gray-600">Công thức tính (3.1+...+3.8)</span>
@@ -364,9 +374,12 @@ export const PlanItemDetails: React.FC<PlanItemDetailsProps> = ({
              <AllocatedCostBlock id={`externalServices-${id}`} label="3.7 Dịch vụ mua ngoài" totalMonthlyCost={totalMonthlyExternalServices} setTotalMonthlyCost={setTotalMonthlyExternalServices} allocatedCost={calculated.externalServices} totalQuantityInKg={planTotals.totalQuantityInKg} itemQuantityInKg={userInput.quantityInKg} />
              <AllocatedCostBlock id={`otherCashExpenses-${id}`} label="3.8 Chi phí tiền khác" totalMonthlyCost={totalMonthlyOtherCashExpenses} setTotalMonthlyCost={setTotalMonthlyOtherCashExpenses} allocatedCost={calculated.otherCashExpenses} totalQuantityInKg={planTotals.totalQuantityInKg} itemQuantityInKg={userInput.quantityInKg} />
           </div>
+        </div>
 
-          <h4 className="font-semibold text-gray-700 border-b pt-4 pb-2">4. Chi phí Tài chính</h4>
-          <AllocatedCostBlock id={`financialCost-${id}`} label="4.1 CP tài sản, định giá..." totalMonthlyCost={totalMonthlyFinancialCost} setTotalMonthlyCost={setTotalMonthlyFinancialCost} allocatedCost={calculated.financialValuationCost} totalQuantityInKg={planTotals.totalQuantityInKg} itemQuantityInKg={userInput.quantityInKg} />
+        {/* Section 5: Financial Costs */}
+        <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+            <h4 className="font-semibold text-gray-700 border-b pb-2">4. Chi phí Tài chính</h4>
+            <AllocatedCostBlock id={`financialCost-${id}`} label="4.1 CP tài sản, định giá..." totalMonthlyCost={totalMonthlyFinancialCost} setTotalMonthlyCost={setTotalMonthlyFinancialCost} allocatedCost={calculated.financialValuationCost} totalQuantityInKg={planTotals.totalQuantityInKg} itemQuantityInKg={userInput.quantityInKg} />
         </div>
         
       </div>
