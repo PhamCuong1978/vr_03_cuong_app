@@ -1,7 +1,37 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Modality } from "@google/genai";
 import type { MeetingDetails } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+/**
+ * Handles errors from the Gemini API and translates them into user-friendly messages.
+ * @param error The error object caught.
+ * @param context A string describing the context of the operation (e.g., 'phiên âm').
+ * @returns An Error object with a user-friendly message.
+ */
+const handleGeminiError = (error: unknown, context: string): Error => {
+    console.error(`Gemini API Error (${context}):`, error);
+    let message = `Đã xảy ra lỗi không xác định trong quá trình ${context}.`;
+
+    if (error instanceof Error) {
+        const errorMessage = error.message.toLowerCase();
+        if (errorMessage.includes('api key not valid') || errorMessage.includes('permission_denied')) {
+            message = "Lỗi xác thực: Khóa API của bạn không hợp lệ hoặc đã hết hạn. Vui lòng kiểm tra lại.";
+        } else if (errorMessage.includes('400 bad request') || errorMessage.includes('invalid argument') || errorMessage.includes('request payload size')) {
+            message = "Lỗi yêu cầu: Dữ liệu gửi đi không hợp lệ. Tệp có thể bị hỏng, quá lớn hoặc có định dạng không được hỗ trợ.";
+        } else if (errorMessage.includes('quota')) {
+            message = "Lỗi hạn ngạch: Bạn đã vượt quá giới hạn yêu cầu cho phép. Vui lòng thử lại sau.";
+        } else if (errorMessage.includes('500') || errorMessage.includes('503') || errorMessage.includes('internal')) {
+            message = "Lỗi máy chủ: Dịch vụ AI hiện đang gặp sự cố. Vui lòng thử lại sau ít phút.";
+        } else if (errorMessage.includes('fetch') || errorMessage.includes('network')) {
+            message = "Lỗi mạng: Không thể kết nối đến dịch vụ AI. Vui lòng kiểm tra kết nối internet của bạn.";
+        } else {
+             message = `Đã xảy ra lỗi trong quá trình ${context}: ${error.message}`;
+        }
+    }
+    return new Error(message);
+};
+
 
 // Helper to convert File -> base64
 const fileToGenerativePart = async (file: File) => {
@@ -22,17 +52,21 @@ const fileToGenerativePart = async (file: File) => {
 };
 
 export const transcribeAudio = async (file: File, model: string): Promise<string> => {
-    const audioPart = await fileToGenerativePart(file);
-    const response = await ai.models.generateContent({
-        model: model,
-        contents: {
-            parts: [
-                { text: "Please transcribe the following audio file. Provide only the transcribed text, without any additional comments or formatting." },
-                audioPart
-            ]
-        },
-    });
-    return response.text;
+    try {
+        const audioPart = await fileToGenerativePart(file);
+        const response = await ai.models.generateContent({
+            model: model,
+            contents: {
+                parts: [
+                    { text: "Vui lòng chuyển đổi file âm thanh sau thành văn bản. Hãy sử dụng tính năng nhận dạng người nói (speaker diarization) để xác định và gán nhãn cho từng người nói (ví dụ: Người nói 1, Người nói 2, v.v.). Kết quả đầu ra chỉ nên là văn bản đã được chuyển đổi kèm theo nhãn của người nói. Không thêm bất kỳ bình luận hay định dạng nào khác ngoài nội dung phiên âm." },
+                    audioPart
+                ]
+            },
+        });
+        return response.text;
+    } catch (error) {
+        throw handleGeminiError(error, 'phiên âm');
+    }
 };
 
 export const generateMeetingMinutes = async (transcription: string, details: MeetingDetails, model: string): Promise<string> => {
@@ -79,22 +113,26 @@ export const generateMeetingMinutes = async (transcription: string, details: Mee
 
         Now, generate the complete HTML in Vietnamese based on the provided transcription and details.
     `;
-
-    const response = await ai.models.generateContent({
-        model: model,
-        contents: prompt
-    });
-
-    // Clean up the response to ensure it's just HTML
-    let htmlContent = response.text.trim();
-    if (htmlContent.startsWith('```html')) {
-        htmlContent = htmlContent.substring(7);
-    }
-    if (htmlContent.endsWith('```')) {
-        htmlContent = htmlContent.substring(0, htmlContent.length - 3);
-    }
     
-    return htmlContent.trim();
+    try {
+        const response = await ai.models.generateContent({
+            model: model,
+            contents: prompt
+        });
+
+        // Clean up the response to ensure it's just HTML
+        let htmlContent = response.text.trim();
+        if (htmlContent.startsWith('```html')) {
+            htmlContent = htmlContent.substring(7);
+        }
+        if (htmlContent.endsWith('```')) {
+            htmlContent = htmlContent.substring(0, htmlContent.length - 3);
+        }
+        
+        return htmlContent.trim();
+    } catch (error) {
+        throw handleGeminiError(error, 'tạo biên bản');
+    }
 };
 
 export const regenerateMeetingMinutes = async (
@@ -137,19 +175,51 @@ export const regenerateMeetingMinutes = async (
         6.  The entire output must be a single block of HTML, without any surrounding markdown backticks (\`\`\`).
     `;
     
-    const response = await ai.models.generateContent({
-        model: model,
-        contents: prompt
-    });
+    try {
+        const response = await ai.models.generateContent({
+            model: model,
+            contents: prompt
+        });
 
-    // Clean up the response to ensure it's just HTML
-    let htmlContent = response.text.trim();
-    if (htmlContent.startsWith('```html')) {
-        htmlContent = htmlContent.substring(7);
+        // Clean up the response to ensure it's just HTML
+        let htmlContent = response.text.trim();
+        if (htmlContent.startsWith('```html')) {
+            htmlContent = htmlContent.substring(7);
+        }
+        if (htmlContent.endsWith('```')) {
+            htmlContent = htmlContent.substring(0, htmlContent.length - 3);
+        }
+        
+        return htmlContent.trim();
+    } catch (error) {
+        throw handleGeminiError(error, 'chỉnh sửa biên bản');
     }
-    if (htmlContent.endsWith('```')) {
-        htmlContent = htmlContent.substring(0, htmlContent.length - 3);
+};
+
+export const generateSpeech = async (textToSpeak: string): Promise<string> => {
+    try {
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash-preview-tts",
+            contents: [{ parts: [{ text: textToSpeak }] }],
+            config: {
+                responseModalities: [Modality.AUDIO],
+                speechConfig: {
+                    voiceConfig: {
+                        prebuiltVoiceConfig: { voiceName: 'Kore' },
+                    },
+                },
+            },
+        });
+
+        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+
+        if (!base64Audio) {
+            throw new Error("Không nhận được dữ liệu âm thanh từ AI.");
+        }
+
+        return base64Audio;
+
+    } catch (error) {
+        throw handleGeminiError(error, 'tạo âm thanh');
     }
-    
-    return htmlContent.trim();
 };

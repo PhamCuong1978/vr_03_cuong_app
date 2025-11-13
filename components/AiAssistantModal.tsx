@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 // Fix: Replaced deprecated 'FunctionCallPart' with 'FunctionCall' from '@google/genai'.
 import { GoogleGenAI, Type, FunctionDeclaration, FunctionCall, Chat } from "@google/genai";
@@ -70,7 +71,7 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       chatRef.current = null; // Reset chat session when modal opens
-      setMessages([{ id: Date.now(), sender: 'ai', text: 'Chào bạn, tôi có thể giúp bạn điều chỉnh kế hoạch kinh doanh như thế nào?' }]);
+      setMessages([{ id: Date.now(), sender: 'ai', text: 'Em chào Anh Cường ạ, em có thể giúp anh điều chỉnh kế hoạch kinh doanh như thế nào ạ?' }]);
     }
   }, [isOpen]);
 
@@ -386,14 +387,14 @@ export const AiAssistantModal: React.FC<AiAssistantModalProps> = ({
 
       if (response.functionCalls && response.functionCalls.length > 0) {
         executeFunctionCalls(response.functionCalls);
-        setMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: 'Đã thực hiện xong! Bạn có cần tôi giúp gì nữa không?' }]);
+        setMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: 'Em đã thực hiện xong. Anh Cường cần em giúp gì nữa không ạ?' }]);
       } else {
         setMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: response.text }]);
       }
 
     } catch (error) {
       console.error("AI Assistant Error:", error);
-      setMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: 'Xin lỗi, đã có lỗi xảy ra. Vui lòng thử lại.' }]);
+      setMessages(prev => [...prev, { id: Date.now() + 1, sender: 'ai', text: 'Xin lỗi, bạn không có quyền truy cập' }]);
     } finally {
       setIsLoading(false);
     }
