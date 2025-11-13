@@ -44,8 +44,7 @@ const BusinessPlanModule: React.FC<BusinessPlanModuleProps> = ({ planToLoad, onP
 
   const [uncalculatedPlanItems, setUncalculatedPlanItems] = useState<PlanItem[]>([]);
   const [planItems, setPlanItems] = useState<PlanItem[]>([]);
-  
-  // Group all settings into a single state object
+
   const [settings, setSettings] = useState<SavedPlanSettings>({
     exchangeRateImport: 26356,
     exchangeRateTax: 26154,
@@ -62,7 +61,6 @@ const BusinessPlanModule: React.FC<BusinessPlanModuleProps> = ({ planToLoad, onP
     totalMonthlyFinancialCost: 0,
   });
 
-  // Helper function to update a specific setting
   const updateSetting = (key: keyof SavedPlanSettings, value: number) => {
     setSettings(prev => ({ ...prev, [key]: value }));
   };
@@ -76,14 +74,12 @@ const BusinessPlanModule: React.FC<BusinessPlanModuleProps> = ({ planToLoad, onP
 
   useEffect(() => {
     if (planToLoad) {
-      // Create new plan item objects to avoid reference issues
-      const newPlanItems = planToLoad.planItems.map(item => ({...item}));
+      const newPlanItems = planToLoad.planItems.map(item => ({ ...item }));
       setUncalculatedPlanItems(newPlanItems);
       setSettings(planToLoad.settings);
-      onPlanLoaded(); // Clear the plan from App state
+      onPlanLoaded();
     }
   }, [planToLoad, onPlanLoaded]);
-
 
   const handleExportCatalog = () => {
     const dataStr = JSON.stringify(products, null, 2);
@@ -104,21 +100,14 @@ const BusinessPlanModule: React.FC<BusinessPlanModuleProps> = ({ planToLoad, onP
     reader.onload = (e) => {
       try {
         const text = e.target?.result;
-        if (typeof text !== 'string') {
-          throw new Error('Không thể đọc file.');
-        }
+        if (typeof text !== 'string') throw new Error('Không thể đọc file.');
         const importedProducts = JSON.parse(text);
 
-        if (Array.isArray(importedProducts) && (importedProducts.length === 0 || (
-            'code' in importedProducts[0] && 
-            'nameVI' in importedProducts[0] &&
-            'brand' in importedProducts[0] &&
-            'defaultWeightKg' in importedProducts[0]
-            ))) {
+        if (Array.isArray(importedProducts) && importedProducts.length >= 0) {
           setProducts(importedProducts);
           alert(`Tải lên thành công ${importedProducts.length} sản phẩm!`);
         } else {
-          throw new Error('Định dạng file không hợp lệ. Vui lòng kiểm tra lại file JSON.');
+          throw new Error('Định dạng file không hợp lệ.');
         }
       } catch (error) {
         alert(`Lỗi khi xử lý file: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
@@ -130,34 +119,31 @@ const BusinessPlanModule: React.FC<BusinessPlanModuleProps> = ({ planToLoad, onP
   };
 
   const handleImportPlan = (event: React.ChangeEvent<HTMLInputElement>) => {
-      const file = event.target.files?.[0];
-      if (!file) return;
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-      const reader = new FileReader();
-      reader.onload = (e) => {
-          try {
-              const text = e.target?.result;
-              if (typeof text !== 'string') throw new Error('Không thể đọc file.');
-              
-              const importedPlan = JSON.parse(text) as SavedPlan;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target?.result;
+        if (typeof text !== 'string') throw new Error('Không thể đọc file.');
+        const importedPlan = JSON.parse(text) as SavedPlan;
 
-              // Validate the imported plan structure
-              if (importedPlan && Array.isArray(importedPlan.planItems) && importedPlan.settings && typeof importedPlan.settings.exchangeRateImport === 'number') {
-                  // Create new objects to avoid reference issues
-                  const newPlanItems = importedPlan.planItems.map((item: any) => ({...item}));
-                  setUncalculatedPlanItems(newPlanItems);
-                  setSettings(importedPlan.settings);
-                  alert(`Tải lên thành công kế hoạch "${importedPlan.name || 'không tên'}"!`);
-              } else {
-                  throw new Error('Định dạng file kế hoạch không hợp lệ. Vui lòng kiểm tra lại file JSON được xuất từ ứng dụng.');
-              }
-          } catch (error) {
-              alert(`Lỗi khi xử lý file: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
-          } finally {
-              if(event.target) event.target.value = ''; // Reset input
-          }
-      };
-      reader.readAsText(file);
+        if (importedPlan && Array.isArray(importedPlan.planItems) && importedPlan.settings) {
+          const newPlanItems = importedPlan.planItems.map((item: any) => ({ ...item }));
+          setUncalculatedPlanItems(newPlanItems);
+          setSettings(importedPlan.settings);
+          alert(`Tải lên thành công kế hoạch "${importedPlan.name || 'không tên'}"!`);
+        } else {
+          throw new Error('Định dạng file kế hoạch không hợp lệ.');
+        }
+      } catch (error) {
+        alert(`Lỗi khi xử lý file: ${error instanceof Error ? error.message : 'Lỗi không xác định'}`);
+      } finally {
+        if (event.target) event.target.value = '';
+      }
+    };
+    reader.readAsText(file);
   };
 
   const addNewProduct = (newProduct: Product) => {
@@ -177,7 +163,7 @@ const BusinessPlanModule: React.FC<BusinessPlanModuleProps> = ({ planToLoad, onP
     );
     setIsEditProductModalOpen(false);
     setProductToEdit(null);
-    setIsManageProductsModalOpen(true); // Re-open the manage modal for a seamless workflow
+    setIsManageProductsModalOpen(true);
   };
 
   const handleOpenEditModal = (product: Product) => {
@@ -189,14 +175,13 @@ const BusinessPlanModule: React.FC<BusinessPlanModuleProps> = ({ planToLoad, onP
   const handleCloseEditModal = () => {
     setIsEditProductModalOpen(false);
     setProductToEdit(null);
-    setIsManageProductsModalOpen(true); // Re-open manage modal on cancel
+    setIsManageProductsModalOpen(true);
   };
-  
+
   const handleAddNewProductFromManage = () => {
     setIsManageProductsModalOpen(false);
     setIsAddProductModalOpen(true);
   };
-
 
   useEffect(() => {
     const calculatedItems = recalculateEntirePlan(uncalculatedPlanItems, {
@@ -227,7 +212,7 @@ const BusinessPlanModule: React.FC<BusinessPlanModuleProps> = ({ planToLoad, onP
               portStorageFee: 0,
               generalWarehouseCostRatePerKg: 1300,
               loanInterestRatePerYear: 8,
-              loanFirstTransferUSD: 10000,
+              loanFirstTransferUSD: 100,
               loanFirstTransferInterestDays: 30,
               postClearanceStorageDays: 20,
               postClearanceStorageRatePerKgDay: 150,
@@ -240,7 +225,6 @@ const BusinessPlanModule: React.FC<BusinessPlanModuleProps> = ({ planToLoad, onP
           },
           calculated: {},
         };
-        
         setUncalculatedPlanItems(prevItems => [...prevItems, newItem]);
       }
     }
@@ -258,14 +242,13 @@ const BusinessPlanModule: React.FC<BusinessPlanModuleProps> = ({ planToLoad, onP
             const topLevelField = field as keyof Omit<PlanItem['userInput'], 'costs'>;
             updatedItem.userInput[topLevelField] = value;
           }
-          
           return updatedItem;
         }
         return item;
       })
     );
   };
-  
+
   const removePlanItem = (id: string) => {
     setUncalculatedPlanItems(prevItems => prevItems.filter(item => item.id !== id));
   };
@@ -282,6 +265,7 @@ const BusinessPlanModule: React.FC<BusinessPlanModuleProps> = ({ planToLoad, onP
   return (
     <>
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
+        {/* Các panel và bảng kế hoạch */}
         <div className="flex flex-col gap-6 mb-6">
           <SettingsPanel
             exchangeRateImport={settings.exchangeRateImport}
@@ -302,10 +286,10 @@ const BusinessPlanModule: React.FC<BusinessPlanModuleProps> = ({ planToLoad, onP
         </div>
 
         {planItems.length > 0 ? (
-          <PlanTable 
-            items={planItems} 
-            updateItem={updatePlanItem} 
-            removeItem={removePlanItem} 
+          <PlanTable
+            items={planItems}
+            updateItem={updatePlanItem}
+            removeItem={removePlanItem}
             planTotals={planTotals}
             salesSalaryRate={settings.salesSalaryRate}
             setSalesSalaryRate={(v) => updateSetting('salesSalaryRate', v)}
@@ -348,48 +332,49 @@ const BusinessPlanModule: React.FC<BusinessPlanModuleProps> = ({ planToLoad, onP
         </div>
 
         <div className="mt-6">
-            <div className="bg-white p-5 rounded-lg shadow-md border border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
-                <DatabaseIcon className="h-5 w-5 mr-2 text-gray-500" />
-                Quản lý dữ liệu sản phẩm
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Chỉnh sửa, tải xuống danh sách sản phẩm hiện tại hoặc tải lên danh sách mới từ file JSON để cập nhật.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <button
-                  onClick={() => setIsManageProductsModalOpen(true)}
-                  className="w-full flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  <PencilIcon className="h-5 w-5 mr-2" />
-                  Chỉnh sửa danh mục
-                </button>
-                <button 
-                  onClick={handleExportCatalog}
-                  className="w-full flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  <DocumentDownloadIcon className="h-5 w-5 mr-2" />
-                  Xuất file JSON
-                </button>
-                
-                <label 
-                  htmlFor="import-json" 
-                  className="w-full cursor-pointer flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  <UploadIcon className="h-5 w-5 mr-2" />
-                  Nhập Danh mục (JSON)
-                </label>
-                <input
-                  id="import-json"
-                  type="file"
-                  className="hidden"
-                  accept=".json,application/json"
-                  onChange={handleImportCatalog}
-                />
-              </div>
+          <div className="bg-white p-5 rounded-lg shadow-md border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+              <DatabaseIcon className="h-5 w-5 mr-2 text-gray-500" />
+              Quản lý dữ liệu sản phẩm
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Chỉnh sửa, tải xuống danh sách sản phẩm hiện tại hoặc tải lên danh sách mới từ file JSON để cập nhật.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <button
+                onClick={() => setIsManageProductsModalOpen(true)}
+                className="w-full flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <PencilIcon className="h-5 w-5 mr-2" />
+                Chỉnh sửa danh mục
+              </button>
+              <button
+                onClick={handleExportCatalog}
+                className="w-full flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <DocumentDownloadIcon className="h-5 w-5 mr-2" />
+                Xuất file JSON
+              </button>
+              <label
+                htmlFor="import-json"
+                className="w-full cursor-pointer flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700"
+              >
+                <UploadIcon className="h-5 w-5 mr-2" />
+                Nhập Danh mục (JSON)
+              </label>
+              <input
+                id="import-json"
+                type="file"
+                className="hidden"
+                accept=".json,application/json"
+                onChange={handleImportCatalog}
+              />
             </div>
+          </div>
         </div>
       </div>
+
+      {/* Các modal */}
       <ManageProductsModal
         isOpen={isManageProductsModalOpen}
         onClose={() => setIsManageProductsModalOpen(false)}
@@ -417,7 +402,7 @@ const BusinessPlanModule: React.FC<BusinessPlanModuleProps> = ({ planToLoad, onP
           setTotalMonthlyWater: (v) => updateSetting('totalMonthlyWater', v),
           setTotalMonthlyStationery: (v) => updateSetting('totalMonthlyStationery', v),
           setTotalMonthlyDepreciation: (v) => updateSetting('totalMonthlyDepreciation', v),
-          setTotalMonthlyExternalServices: (v) => updateSetting('totalMonthlyExternalServices', v),
+	  setTotalMonthlyExternalServices: (v) => updateSetting('totalMonthlyExternalServices', v),
           setTotalMonthlyOtherCashExpenses: (v) => updateSetting('totalMonthlyOtherCashExpenses', v),
           setTotalMonthlyFinancialCost: (v) => updateSetting('totalMonthlyFinancialCost', v),
         }}
